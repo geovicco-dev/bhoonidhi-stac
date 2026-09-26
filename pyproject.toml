@@ -2,6 +2,7 @@
 name = "bhoonidhi-stac"
 version = "0.1.0"
 description = "Bhoonidhi scenes as STAC: portal scene to STAC item, collections with licence and credit, and search areas split for the portal's result limit."
+readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
 authors = [{ name = "Aditya Sharma", email = "geovicco.dev@gmail.com" }]

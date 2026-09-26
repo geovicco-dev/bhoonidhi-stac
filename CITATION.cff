@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "bhoonidhi-stac: ISRO Bhoonidhi scene metadata as a STAC catalogue"
+abstract: >-
+  bhoonidhi-stac turns scene metadata from ISRO's Bhoonidhi archive into
+  SpatioTemporal Asset Catalog (STAC) collections and items, with each
+  collection's licence and credit, and splits portal searches so none loses
+  scenes to the portal's result limit. It builds the public catalogue at
+  https://bhoonidhi-stac.ecotrakr.in, which holds metadata only.
+type: software
+authors:
+  - given-names: Aditya
+    family-names: Sharma
+    alias: geovicco-dev
+    orcid: "https://orcid.org/0009-0007-6154-086X"
+repository-code: "https://github.com/geovicco-dev/bhoonidhi-stac"
+url: "https://bhoonidhi-stac.ecotrakr.in"
+license: MIT
+keywords:
+  - STAC
+  - pgSTAC
+  - remote sensing
+  - earth observation
+  - satellite imagery
+  - ISRO
+  - Bhoonidhi
+  - NRSC
+version: 0.1.0
