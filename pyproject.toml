@@ -1,0 +1,39 @@
+[project]
+name = "bhoonidhi-stac"
+version = "0.1.0"
+description = "Bhoonidhi scenes as STAC: portal scene to STAC item, collections with licence and credit, and search areas split for the portal's result limit."
+license = "MIT"
+requires-python = ">=3.12"
+authors = [{ name = "Aditya Sharma", email = "geovicco.dev@gmail.com" }]
+dependencies = [
+    "bhoonidhi-downloader==0.5.6",
+    "psycopg[binary]>=3.2",
+    "pypgstac[psycopg]==0.9.12",
+    "pydantic>=2.9",
+    "rich>=13.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bhoonidhi_stac"]
+# The collections manifest is package data; naming it keeps it in the
+# wheel even if an ignore rule elsewhere matches data folders.
+artifacts = ["src/bhoonidhi_stac/data/*.json"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.14",
+]
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
