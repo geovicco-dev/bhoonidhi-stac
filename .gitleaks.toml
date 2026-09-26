@@ -1,0 +1,8 @@
+# gitleaks settings: the default rules, plus one known false positive.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Product tokens in the collections manifest (\"token\": \"Level-2A\"), not secrets"
+paths = ['''src/bhoonidhi_stac/data/collections-manifest\.json''']
+regexes = ['''"token":\s*"[A-Za-z0-9_\-()]*"''']
