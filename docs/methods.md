@@ -1,8 +1,8 @@
 # Methods
 
-How the catalogue is built from the Bhoonidhi portal and kept current. The
-steps below are what the code in this repository does; the scheduler that
-runs them is not part of it.
+How the data behind the STAC API is built from the Bhoonidhi portal and
+kept current. The steps below are what the code in this repository does;
+the scheduler that runs them is not part of it.
 
 ## Source
 
@@ -11,7 +11,7 @@ Every scene comes from ISRO's Bhoonidhi portal
 portal's own search, the same search anyone can run on its website without
 an account, through
 [bhoonidhi-downloader](https://github.com/geovicco-dev/bhoonidhi-downloader).
-The catalogue stores metadata and links only. It downloads no imagery.
+The API serves metadata and links only. Nothing here downloads imagery.
 
 ## Collections
 
@@ -101,7 +101,7 @@ fails is searched again on a later run. Older weeks are filled on request,
 week by week, with the same search; because every write is an upsert,
 filling a week twice is harmless.
 
-The catalogue is therefore up to a week behind the portal. Availability can
+The API is therefore up to a week behind the portal. Availability can
 change after a scene is stored: a scene that could be downloaded directly
 may later need ordering. `bhd` searches the live portal when you run it.
 

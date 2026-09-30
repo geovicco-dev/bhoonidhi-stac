@@ -1,19 +1,20 @@
 # bhoonidhi-stac
 
-Scene metadata from ISRO's [Bhoonidhi](https://bhoonidhi.nrsc.gov.in)
-archive as a [STAC](https://stacspec.org) catalogue, and the Python library
-that builds it.
+A public [STAC API](https://github.com/radiantearth/stac-api-spec) for
+searching and discovering scenes in ISRO's
+[Bhoonidhi](https://bhoonidhi.nrsc.gov.in) archive, and the Python library
+that builds its data.
 
-**Catalogue:** https://bhoonidhi-stac.ecotrakr.in
+**STAC API:** https://bhoonidhi-stac.ecotrakr.in
 
 Search the metadata without an account or API approval. Downloading still
 needs your own free Bhoonidhi account.
 
-> Unofficial. Not affiliated with or endorsed by ISRO or NRSC. The catalogue
-> holds metadata and links only; no imagery is stored or served. It comes
+> Unofficial. Not affiliated with or endorsed by ISRO or NRSC. The API
+> serves metadata and links only; no imagery is stored or served. It comes
 > with no uptime guarantee.
 
-## What the catalogue holds
+## What the API serves
 
 - 79 collections, one per satellite and sensor, from 41 satellites: ISRO's
   own and the foreign missions Bhoonidhi distributes (Sentinel-1 and -2,
@@ -24,7 +25,7 @@ needs your own free Bhoonidhi account.
   whether it can be downloaded directly or must be ordered, a link to its
   quicklook, and the portal's own fields.
 - Scenes from 1988 onwards. A weekly update adds the latest week of every
-  product still being acquired, so the catalogue runs up to a week behind
+  product still being acquired, so the API runs up to a week behind
   the portal.
 
 ## Search it
@@ -35,8 +36,8 @@ Any STAC client works. With
 ```python
 from pystac_client import Client
 
-catalogue = Client.open("https://bhoonidhi-stac.ecotrakr.in")
-search = catalogue.search(
+client = Client.open("https://bhoonidhi-stac.ecotrakr.in")
+search = client.search(
     collections=["resourcesat-2a-liss3"],
     bbox=[77.0, 28.4, 77.4, 28.8],  # around Delhi
     datetime="2026-09-01/2026-09-15",
@@ -50,7 +51,7 @@ To download a scene you find, use
 Bhoonidhi account, or ask an AI assistant through
 [bhoonidhi-mcp](https://github.com/geovicco-dev/bhoonidhi-mcp).
 [bhoonidhi-explorer](https://github.com/geovicco-dev/bhoonidhi-explorer)
-searches this catalogue in plain words on a map.
+searches this API in plain words on a map.
 
 ## How it is built
 

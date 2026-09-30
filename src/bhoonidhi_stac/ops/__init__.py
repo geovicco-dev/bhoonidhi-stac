@@ -1,4 +1,4 @@
-"""Building the catalogue's collections and searching the portal by area.
+"""Building the STAC collections and searching the portal by area.
 
 ``register_collections`` turns the portal's product list into STAC
 collections with licence and credit; ``spatial`` splits a search area into

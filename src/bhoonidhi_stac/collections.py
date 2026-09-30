@@ -1,4 +1,4 @@
-"""The collections the catalogue holds, and what each one is.
+"""The collections the STAC API serves, and what each one is.
 
 ``data/collections-manifest.json`` lists one entry per collection (satellite,
 sensor, products with their operational windows, and the portal's access
