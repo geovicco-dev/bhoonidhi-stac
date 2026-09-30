@@ -10,3 +10,6 @@ dist/
 
 # Local settings
 .env
+
+# Local archive of old checkouts and history bundles, kept on the working machine
+/archive/
