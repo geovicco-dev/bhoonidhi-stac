@@ -21,10 +21,16 @@ acquisition dates and access level (`bhd archive` shows it).
 satellite and sensor, 79 in all. Each collection records:
 
 - its products, each with the dates it was acquired over (the product
-  window);
+  window) and the resolution the portal gives for it;
 - the portal's access level: open for direct download, open on order, or
   priced;
-- licence and credit (below).
+- licence and credit (below);
+- a description built from the above: sensor and satellite, acquisition
+  dates, operator and access.
+
+The collection's temporal extent spans its product windows and stays open
+while any product is still acquired. Its summaries list the resolutions and
+products. Collections declare no STAC extension.
 
 The list is kept in `src/bhoonidhi_stac/data/collections-manifest.json`.
 `scripts/refresh_manifest.py` rebuilds it from the portal's current product
@@ -66,8 +72,6 @@ turns one portal result into a STAC item:
 | `datetime` | The date of pass (`DOP`), at 00:00 UTC; the portal gives no time. A scene whose date cannot be read gets the date it was stored |
 | `platform`, `instruments` | The portal's satellite and sensor codes |
 | `gsd` | The sensor's resolution in metres, from the portal's product list |
-| `sat:orbit_state`, `sat:relative_orbit` | Pass type and path, where the portal gives them |
-| `view:azimuth` | The portal's roll angle, where it gives one |
 | `bhoonidhi:access` | `Open`, `OnOrder` or `Priced` |
 | `bhoonidhi:availability`, `bhoonidhi:downloadable` | Whether the scene could be downloaded directly when it was last searched |
 | `bhoonidhi:product_type`, `bhoonidhi:product_code`, `bhoonidhi:selection`, `bhoonidhi:quality_score` | The portal's product fields |
@@ -79,11 +83,19 @@ coordinates, orbit numbers, `DOP`, `SATELLITE`, `SENSOR`, `SELECTION` and
 others), so nothing from the source is lost. The ingest adds
 `bhoonidhi:product`, the product the scene was found under.
 
+Items declare no STAC extension. The portal's path (`PATHNO`), pass type
+(`PASS_TYPE`) and roll angle (`ROLL`) stay as its own fields, because none
+means what the matching extension field means: path numbers count ground
+tracks by their position on the ground, where the sat extension's relative
+orbit counts orbits in the order they are flown; the pass type holds the
+portal's own codes (such as SSR and PLD), not ascending or descending; and
+a roll angle is not an azimuth.
+
 The portal's metadata carries no reliable cloud cover, so
 `bhoonidhi:cloud_cover` is always empty. `bhoonidhi:downloaded` and
 `bhoonidhi:status` hold fixed values (`false`, `L0`). pgSTAC does not store
-empty values: a field with nothing in it (cloud cover, and orbit or roll
-where the portal gives none) is absent from the stored item.
+empty values: a field with nothing in it, such as cloud cover, is absent
+from the stored item.
 
 ## Storing
 
@@ -111,7 +123,7 @@ Every collection names two providers: the satellite's operator as
 `producer`, and NRSC/ISRO Bhoonidhi as `host` and `licensor`, with a
 `rel="license"` link to the Bhoonidhi End User License Agreement. ISRO
 collections carry the credit the agreement asks for, "ISRO-IRS". Other
-missions (Copernicus/ESA, USGS, EUMETSAT, NOAA, NASA, KARI, SSTL/UKSA) name
+missions (Copernicus/ESA, USGS, EUMETSAT, NOAA, NASA, KARI, SSTL) name
 their operator, whose terms also apply. Collections of priced data carry
 `license: proprietary`; the rest carry `other`, because the agreement is not
 a standard open licence. `tests/test_stac_licensing.py` checks each case.

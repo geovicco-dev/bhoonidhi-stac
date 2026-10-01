@@ -60,7 +60,10 @@ _PRODUCER_BY_PREFIX: list[tuple[str, tuple[str, str]]] = [
     ("IRS", ("ISRO", "https://www.isro.gov.in/")),
     ("NISAR", ("NASA/ISRO", "https://www.isro.gov.in/")),
     # --- non-IRS (each under its own provider's terms) ---
-    ("Sentinel", ("Copernicus/ESA", "https://www.copernicus.eu/")),
+    (
+        "Sentinel",
+        ("Copernicus/ESA", "https://eu-space.europa.eu/earth-observation/copernicus"),
+    ),
     ("LandSat", ("USGS", "https://www.usgs.gov/landsat-missions")),
     ("Terra", ("NASA", "https://www.nasa.gov/")),
     ("Aqua", ("NASA", "https://www.nasa.gov/")),
@@ -69,7 +72,7 @@ _PRODUCER_BY_PREFIX: list[tuple[str, tuple[str, str]]] = [
     ("NOAA", ("NOAA", "https://www.noaa.gov/")),
     ("MetOp", ("EUMETSAT", "https://www.eumetsat.int/")),
     ("KompSat", ("KARI", "https://www.kari.re.kr/eng/")),
-    ("Novasar", ("SSTL/UKSA", "https://www.sstl.co.uk/")),
+    ("Novasar", ("SSTL", "https://www.sstl.co.uk/")),
 ]
 
 
@@ -131,6 +134,56 @@ def stac_licensing(satellite: str, canonical_access: str | None) -> dict[str, An
 # Normalise portal access labels to the canonical gate labels.
 _ACCESS_MAP = {"DirectDownload": "Open", "OnOrder": "OnOrder", "Priced": "Priced"}
 
+# How each access level reads in a collection's description.
+_ACCESS_SENTENCE = {
+    "Open": "Open data, downloaded directly from Bhoonidhi with a free account.",
+    "OnOrder": "Open data, ordered free of charge on Bhoonidhi before download.",
+    "Priced": "Priced data, sold through Bhoonidhi.",
+}
+
+
+def _span(product_windows: list[dict[str, Any]]) -> tuple[str | None, str | None]:
+    """First and last acquisition dates across a collection's products.
+
+    The end is ``None`` while any product is still being acquired, and both
+    are ``None`` when the portal gives no start date at all.
+    """
+    starts = [
+        w["operational_start"] for w in product_windows if w.get("operational_start")
+    ]
+    if not starts:
+        return None, None
+    ends = [w.get("operational_end") for w in product_windows]
+    if any(end is None for end in ends):
+        return min(starts), None
+    return min(starts), max(end for end in ends if end)
+
+
+def _describe(
+    satellite: str,
+    sensor: str,
+    product_windows: list[dict[str, Any]],
+    producer: str,
+    canonical_access: str | None,
+) -> str:
+    """The collection's description, built from its manifest entry.
+
+    Says what the collection holds, when the portal's product list says it
+    was acquired, who operates the satellite, and how its data is obtained,
+    so the text follows the manifest whenever the collections are registered
+    again.
+    """
+    start, end = _span(product_windows)
+    first = f"{sensor} scenes from {satellite} in the Bhoonidhi archive of NRSC/ISRO"
+    if start and end is None:
+        first += f", acquired since {start}"
+    elif start:
+        first += f", acquired from {start} to {end}"
+    sentences = [f"{first}.", f"{satellite} is operated by {producer}."]
+    if canonical_access in _ACCESS_SENTENCE:
+        sentences.append(_ACCESS_SENTENCE[canonical_access])
+    return " ".join(sentences)
+
 
 def build_stac_collection(
     collection_config: dict[str, Any],
@@ -146,9 +199,9 @@ def build_stac_collection(
     ----------
     collection_config
         One entry from the collections manifest (``collection_id``,
-        ``satellite``, ``sensor``, ``resolution_m``, ``access_level``,
-        ``products``, and either ``start_date``/``end_date`` or
-        ``operational_start``/``operational_end``).
+        ``satellite``, ``sensor``, ``access_level``, and ``product_windows``:
+        each product's ``token``, ``operational_start``, ``operational_end``
+        and ``resolution_m``).
     aoi
         Bounding box dict with ``min_lon``/``min_lat``/``max_lon``/``max_lat``.
 
@@ -156,32 +209,42 @@ def build_stac_collection(
     -------
     dict
         A STAC Collection ready for ``DatabaseManager.register_collection``.
+        The temporal extent spans the products' operational windows, open
+        while any product is still acquired. ``summaries`` lists each value
+        the portal gives; a summary with no value is left out, since STAC
+        does not allow an empty one.
     """
     collection_id = collection_config["collection_id"]
-    op_start = collection_config.get("start_date") or collection_config.get(
-        "operational_start"
-    )
-    op_end = collection_config.get("end_date") or collection_config.get(
-        "operational_end"
-    )
     sensor = collection_config.get("sensor", "")
     satellite = collection_config.get("satellite", "")
-    resolution = collection_config.get("resolution_m")
     access_level = collection_config.get("access_level", "")
-    products = collection_config.get("products", [])
+    product_windows = collection_config.get("product_windows") or []
     canonical_access = _ACCESS_MAP.get(access_level, access_level)
+    op_start, op_end = _span(product_windows)
 
     licensing = stac_licensing(satellite, canonical_access)
+
+    summaries: dict[str, list[Any]] = {
+        "platform": [satellite.lower().replace(" ", "-")],
+        "instruments": [sensor],
+        "gsd": sorted(
+            {w["resolution_m"] for w in product_windows if w.get("resolution_m")}
+        ),
+        "bhoonidhi:access": [canonical_access],
+        "bhoonidhi:products": [w["token"] for w in product_windows if w.get("token")],
+    }
 
     return {
         "type": "Collection",
         "id": collection_id,
         "stac_version": "1.0.0",
-        "stac_extensions": [
-            "https://stac-extensions.github.io/eo/v2.0.0/schema.json",
-            "https://stac-extensions.github.io/sat/v1.0.0/schema.json",
-        ],
-        "description": collection_config.get("description", ""),
+        "description": _describe(
+            satellite,
+            sensor,
+            product_windows,
+            next(p["name"] for p in licensing["providers"] if "producer" in p["roles"]),
+            canonical_access,
+        ),
         "license": licensing["license"],
         "providers": licensing["providers"],
         "extent": {
@@ -205,19 +268,7 @@ def build_stac_collection(
             },
         },
         "links": [licensing["license_link"]],
-        "summaries": {
-            "platform": [satellite.lower().replace(" ", "-")],
-            "instruments": [sensor] if isinstance(sensor, str) else sensor,
-            "gsd": [float(resolution)] if resolution else [],
-            "bhoonidhi:access": [canonical_access],
-            "bhoonidhi:products": (
-                products
-                if isinstance(products, list)
-                else [products]
-                if products
-                else []
-            ),
-        },
+        "summaries": {key: values for key, values in summaries.items() if values},
     }
 
 
@@ -316,7 +367,7 @@ def generate_collection_config(
                     "sensor": sensor,
                     "resolution_m": meta.get("resolution"),
                     "products": [],
-                    "product_windows": {},  # token -> {start, end}
+                    "product_windows": {},  # token -> {start, end, resolution}
                     "_starts": [],
                     "_ends": [],
                     "_any_active": False,
@@ -329,7 +380,13 @@ def generate_collection_config(
             # A sensor's default (empty token) is keyed as "" so it is never
             # lost. Widen if the same token appears more than once.
             pw = g["product_windows"].setdefault(
-                token, {"start": op_start, "end": op_end, "any_active": op_end is None}
+                token,
+                {
+                    "start": op_start,
+                    "end": op_end,
+                    "any_active": op_end is None,
+                    "resolution": _metres(meta.get("resolution")),
+                },
             )
             if op_start is not None and (pw["start"] is None or op_start < pw["start"]):
                 pw["start"] = op_start
@@ -356,7 +413,8 @@ def generate_collection_config(
         op_end = None if g["_any_active"] else (max(g["_ends"]) if g["_ends"] else None)
 
         # Structured per-product windows for the ingest. An active
-        # product has operational_end = None.
+        # product has operational_end = None. resolution_m is the portal's
+        # resolution for that product, in metres.
         product_windows = [
             {
                 "token": token,
@@ -364,6 +422,7 @@ def generate_collection_config(
                 "operational_end": None
                 if pw["any_active"]
                 else (pw["end"].isoformat() if pw["end"] else None),
+                "resolution_m": pw["resolution"],
             }
             for token, pw in g["product_windows"].items()
         ]
@@ -400,6 +459,14 @@ def _parse_mdy(s: str | None) -> date | None:
         month, day, year = (int(p) for p in s.split("/"))
         return date(year, month, day)
     except (ValueError, TypeError):
+        return None
+
+
+def _metres(value: Any) -> float | None:
+    """The portal's resolution string as metres, or ``None`` if it is not a number."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
         return None
 
 

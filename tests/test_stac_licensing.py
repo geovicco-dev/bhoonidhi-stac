@@ -70,7 +70,7 @@ def test_license_link_points_at_eula():
         ("Aqua", "NASA"),
         ("MetOp-B", "EUMETSAT"),
         ("KompSat-3A", "KARI"),
-        ("Novasar-1", "SSTL/UKSA"),
+        ("Novasar-1", "SSTL"),
         ("NOAA-19", "NOAA"),
     ],
 )

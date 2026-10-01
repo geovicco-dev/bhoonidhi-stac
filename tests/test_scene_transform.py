@@ -52,13 +52,25 @@ def test_tiled_scene_transforms_without_dropping():
     assert item["type"] == "Feature"
     assert item["id"] == "R2_W_zzz_01APR2023_15APR2023_15_N36E068_JTGN00GTD"
     assert item["collection"] == "resourcesat-2-awifs"
-    # A tile token is not an orbit path, so relative_orbit is absent.
-    assert item["properties"]["sat:relative_orbit"] is None
+    assert item["properties"]["PATHNO"] == "N36E068"
 
 
-def test_numeric_pathno_still_parses_to_orbit():
+def test_portal_orbit_fields_stay_raw_fields_only():
+    # PATHNO numbers ground tracks by position, not orbits in flying order;
+    # PASS_TYPE holds reception codes (SSR, D, X, ...) and ROLL a signed roll
+    # angle. None matches the meaning of a sat or view field, so all stay as
+    # the portal's own fields and the item declares no extension.
     scene = _tiled_scene()
     scene["PATHNO"] = "94"
-    item = _manager()._ensure_stac_item(scene, "resourcesat-2-awifs")
+    scene["ROW"] = "52"
+    scene["PASS_TYPE"] = "SSR"
+    scene["ROLL"] = "-12.5"
+    item = _manager()._ensure_stac_item(scene, "resourcesat-2a-liss3")
     assert item is not None
-    assert item["properties"]["sat:relative_orbit"] == 94
+    props = item["properties"]
+    assert props["PATHNO"] == "94"
+    assert props["ROW"] == "52"
+    assert props["PASS_TYPE"] == "SSR"
+    assert props["ROLL"] == "-12.5"
+    assert not [k for k in props if k.startswith(("sat:", "view:", "eo:"))]
+    assert item["stac_extensions"] == []

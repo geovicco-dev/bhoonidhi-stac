@@ -53,20 +53,20 @@ writes this page; do not edit it by hand.
 | `noaa-17-avhrr` | NOAA-17 | AVHRR | (default) | NOAA | open, on order | 2005-09-20 to 2010-04-13 |
 | `noaa-18-avhrr` | NOAA-18 | AVHRR | (default) | NOAA | open, on order | 2005-10-01 to 2009-10-09 |
 | `noaa-19-avhrr` | NOAA-19 | AVHRR | L1C | NOAA | open, direct download | 2025-01-01 to 2025-08-11 |
-| `novasar-1-sar-20m-2pol-scansar` | Novasar-1 | SAR(20m-2Pol-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-20m-scansar` | Novasar-1 | SAR(20m-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-30m-3pol-scansar` | Novasar-1 | SAR(30m-3Pol-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-30m-scansar` | Novasar-1 | SAR(30m-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-33m-copol-scansar` | Novasar-1 | SAR(33m-CoPol-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-35m-3pol-scansar` | Novasar-1 | SAR(35m-3Pol-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-40m-scansar` | Novasar-1 | SAR(40m-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-50m-co6-cross1-scansar` | Novasar-1 | SAR(50m-Co6+Cross1-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-50m-co6-cross3-scansar` | Novasar-1 | SAR(50m-Co6+Cross3-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-6m-stripmap` | Novasar-1 | SAR(6m-Stripmap) | Strip-GRD, Strip-SLC | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-all` | Novasar-1 | SAR(All) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-cocross-scansar` | Novasar-1 | SAR(CoCross-ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-maritime` | Novasar-1 | SAR(Maritime) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
-| `novasar-1-sar-scansar` | Novasar-1 | SAR(ScanSAR) | Strip | SSTL/UKSA | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-20m-2pol-scansar` | Novasar-1 | SAR(20m-2Pol-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-20m-scansar` | Novasar-1 | SAR(20m-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-30m-3pol-scansar` | Novasar-1 | SAR(30m-3Pol-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-30m-scansar` | Novasar-1 | SAR(30m-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-33m-copol-scansar` | Novasar-1 | SAR(33m-CoPol-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-35m-3pol-scansar` | Novasar-1 | SAR(35m-3Pol-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-40m-scansar` | Novasar-1 | SAR(40m-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-50m-co6-cross1-scansar` | Novasar-1 | SAR(50m-Co6+Cross1-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-50m-co6-cross3-scansar` | Novasar-1 | SAR(50m-Co6+Cross3-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-6m-stripmap` | Novasar-1 | SAR(6m-Stripmap) | Strip-GRD, Strip-SLC | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-all` | Novasar-1 | SAR(All) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-cocross-scansar` | Novasar-1 | SAR(CoCross-ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-maritime` | Novasar-1 | SAR(Maritime) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
+| `novasar-1-sar-scansar` | Novasar-1 | SAR(ScanSAR) | Strip | SSTL | open, direct download | 2019-10-01 to acquiring |
 | `oceansat-1-ocm` | OceanSat-1 | OCM | (default) | ISRO | open, on order | 1999-07-01 to 2009-07-29 |
 | `oceansat-2-ocm-gac` | OceanSat-2 | OCM(GAC) | L1C, L1B, L2B-AerosolDepth, L2B-Chlorophyll, L2B-DiffusedAttenuation, L2B-SuspendedSediments | ISRO | open, direct download | 2019-01-01 to 2023-05-03 |
 | `oceansat-2-ocm-lac` | OceanSat-2 | OCM(LAC) | (default) | ISRO | open, direct download | 2009-12-31 to 2023-05-03 |

@@ -611,12 +611,6 @@ class DatabaseManager:
             except (TypeError, ValueError):
                 return 0.0
 
-        def to_int(val):
-            try:
-                return int(val)
-            except (TypeError, ValueError):
-                return None
-
         nw_lat = to_float(scene_meta.get("ImgCrnNWLat") or scene_meta.get("CrnNWLat"))
         nw_lon = to_float(scene_meta.get("ImgCrnNWLon") or scene_meta.get("CrnNWLon"))
         ne_lat = to_float(scene_meta.get("ImgCrnNELat") or scene_meta.get("CrnNELat"))
@@ -669,6 +663,12 @@ class DatabaseManager:
                 pass
 
         # ── STAC-standard properties alongside raw portal fields ─
+        # Portal fields whose meaning differs from a STAC extension field stay
+        # as raw fields only. PATHNO numbers ground tracks by their position
+        # on the ground, while the sat extension's relative orbit counts
+        # orbits in the order they are flown. PASS_TYPE holds the portal's
+        # own codes (SSR, PLD, X, D, N and others), not ascending or
+        # descending, and ROLL is a signed roll angle, not an azimuth.
 
         properties = {
             # preserve all raw portal fields
@@ -679,11 +679,6 @@ class DatabaseManager:
             "instruments": [str(scene_meta.get("SENSOR", ""))],
             # STAC extensions
             "gsd": gsd,
-            "sat:orbit_state": scene_meta.get("PASS_TYPE"),
-            "sat:relative_orbit": to_int(scene_meta.get("PATHNO")),
-            "view:azimuth": to_float(scene_meta.get("ROLL"))
-            if scene_meta.get("ROLL") not in (None, "", "-999")
-            else None,
             # bhoonidhi extensions
             "bhoonidhi:access": access.value,
             "bhoonidhi:availability": availability.value,
@@ -726,11 +721,7 @@ class DatabaseManager:
         return {
             "type": "Feature",
             "stac_version": "1.0.0",
-            "stac_extensions": [
-                "https://stac-extensions.github.io/eo/v2.0.0/schema.json",
-                "https://stac-extensions.github.io/sat/v1.0.0/schema.json",
-                "https://stac-extensions.github.io/view/v1.0.0/schema.json",
-            ],
+            "stac_extensions": [],
             "id": scene_meta.get("ID") or scene_meta.get("FILENAME"),
             "geometry": geometry,
             "bbox": bbox,
