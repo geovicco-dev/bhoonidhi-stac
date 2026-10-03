@@ -106,7 +106,12 @@ from the stored item.
 Items are written to a pgSTAC database with pypgstac. Every write is an
 upsert keyed by scene id: searching the same week again replaces the
 scenes it finds and never adds a copy. Before the first write,
-`ensure_pgstac_schema` creates or migrates the pgSTAC schema.
+`ensure_pgstac_schema` creates or migrates the pgSTAC schema. After each
+migration it also makes a search box given with heights (six numbers:
+west, south, lowest height, east, north, highest height) search its map
+box, since scene footprints carry no height. pgSTAC's own version builds a
+3D box that cannot be compared with a flat footprint, so such a search
+failed with a server error.
 
 ## Keeping it current
 

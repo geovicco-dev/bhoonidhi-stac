@@ -295,6 +295,9 @@ class DatabaseManager:
                 # Verify core tables exist
                 self._verify_pgstac_tables(db)
 
+                # After the migration, which reinstalls pgSTAC's own version
+                self._read_bbox_with_heights_as_2d(db)
+
                 self.console.print("\n[green]✅ pgSTAC schema is ready[/green]")
 
                 # Enable Auto Extent
@@ -350,6 +353,41 @@ class DatabaseManager:
                 return db.version
         except Exception:
             return None
+
+    # pgSTAC turns a search bbox into a shape with bbox_geom. Its version builds
+    # a 3D box from a 6-number bbox (with heights), and comparing that box with
+    # a 2D scene footprint fails, so such a search returns a server error. Scene
+    # footprints carry no height, so the 6-number bbox is read as the 4-number
+    # box it covers on the map: west, south, east, north (elements 0, 1, 3, 4).
+    # Same signature and attributes as pgSTAC 0.9.12's version.
+    BBOX_GEOM_2D = """
+        CREATE OR REPLACE FUNCTION pgstac.bbox_geom(_bbox jsonb)
+        RETURNS geometry
+        LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
+        AS $function$
+        SELECT CASE jsonb_array_length(_bbox)
+            WHEN 4 THEN ST_SetSRID(ST_MakeEnvelope(
+                (_bbox->>0)::float, (_bbox->>1)::float,
+                (_bbox->>2)::float, (_bbox->>3)::float
+            ), 4326)
+            WHEN 6 THEN ST_SetSRID(ST_MakeEnvelope(
+                (_bbox->>0)::float, (_bbox->>1)::float,
+                (_bbox->>3)::float, (_bbox->>4)::float
+            ), 4326)
+            ELSE null END;
+        $function$;
+    """
+
+    def _read_bbox_with_heights_as_2d(self, db: PgstacDB) -> None:
+        """Make a 6-number search bbox (with heights) search its 2D map box.
+
+        Runs after every migration, since a pgSTAC upgrade reinstalls its own
+        ``bbox_geom``. Nothing stored depends on the function: it is called
+        only for a search area, and for an item that has no geometry.
+        """
+        with db.connect().cursor() as cur:
+            cur.execute(self.BBOX_GEOM_2D)
+        self.console.print("   ├─ Search bbox with heights read as its 2D box")
 
     def _enable_pgstac_auto_extent(self, conn):
         """Sets the PgSTAC setting to automatically update collection extents."""
