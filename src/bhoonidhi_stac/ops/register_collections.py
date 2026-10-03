@@ -210,7 +210,9 @@ def build_stac_collection(
     dict
         A STAC Collection ready for ``DatabaseManager.register_collection``.
         The temporal extent spans the products' operational windows, open
-        while any product is still acquired. ``summaries`` lists each value
+        while any product is still acquired, and the spatial extent is the
+        AOI; registering replaces both with the scenes' extent once the
+        collection holds scenes. ``summaries`` lists each value
         the portal gives; a summary with no value is left out, since STAC
         does not allow an empty one.
     """

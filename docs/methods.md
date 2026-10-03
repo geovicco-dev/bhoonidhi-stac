@@ -28,9 +28,13 @@ satellite and sensor, 79 in all. Each collection records:
 - a description built from the above: sensor and satellite, acquisition
   dates, operator and access.
 
-The collection's temporal extent spans its product windows and stays open
-while any product is still acquired. Its summaries list the resolutions and
-products. Collections declare no STAC extension.
+The collection's extent follows its scenes: dates from the first to the
+newest scene, and a box around every scene footprint. Registering a
+collection sets it from pgSTAC's summary of the scenes already loaded, and
+pgSTAC updates it whenever new scenes are saved. A collection with no scenes
+yet shows its product windows (open while a product is still acquired) and
+the India search box. Its summaries list the resolutions and products.
+Collections declare no STAC extension.
 
 The list is kept in `src/bhoonidhi_stac/data/collections-manifest.json`.
 `scripts/refresh_manifest.py` rebuilds it from the portal's current product

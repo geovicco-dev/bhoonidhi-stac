@@ -22,8 +22,13 @@ The first public release.
 
 - Every collection has a description, built from its manifest entry
   (sensor and satellite, acquisition dates, operator, access), and its
-  summaries list each product's resolution and name. Its temporal extent
-  spans the product windows, open while any product is still acquired.
+  summaries list each product's resolution and name.
+- A collection's extent follows its scenes from the moment it is
+  registered: first to newest scene date, and a box around every scene
+  footprint. Before, a collection kept the registered India box and
+  product dates until new scenes arrived, so collections whose products
+  had ended never showed their scenes' coverage. A collection with no
+  scenes yet shows its product windows and the India box.
 - Items and collections declare no STAC extension. The eo, sat and view
   fields the items carried did not fit those extensions: the portal's
   path number, pass type and roll angle stay as its own fields.

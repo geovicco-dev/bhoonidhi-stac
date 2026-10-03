@@ -427,6 +427,14 @@ class DatabaseManager:
                         insert_mode=Methods.insert,
                     )
 
+                # The extent follows the scenes, as pgSTAC's automatic update
+                # sets it whenever scenes are saved. A collection that gets
+                # no new scenes would otherwise keep the registered extent.
+                if self._set_extent_from_scenes(db, collection_id):
+                    self.console.print("   ├─ Extent set from its scenes")
+                else:
+                    self.console.print("   ├─ No scenes yet, registered extent kept")
+
                 self.console.print(
                     f"[green]   └─ ✅ Collection '{collection_id}' registered[/green]"
                 )
@@ -439,6 +447,34 @@ class DatabaseManager:
             )
             self.console.print_exception()
             raise RuntimeError(f"Collection registration failed: {e}") from e
+
+    def _set_extent_from_scenes(self, db: PgstacDB, collection_id: str) -> bool:
+        """
+        Set a collection's extent (dates and box) from the scenes it holds.
+
+        Uses pgSTAC's ``collection_extent``, which reads the per-partition
+        summary, the same value its automatic update writes: the first to
+        the newest scene date, and the box around every footprint.
+
+        Args:
+            db: PgstacDB connection
+            collection_id: Collection identifier
+
+        Returns:
+            True if the extent was set, False if the collection holds no
+            scenes (its registered extent stays)
+        """
+        updated = db.query_one(
+            """
+            UPDATE pgstac.collections
+            SET content = jsonb_set(content, '{extent}', e.extent)
+            FROM (SELECT pgstac.collection_extent(%s, FALSE) AS extent) AS e
+            WHERE id = %s AND e.extent IS NOT NULL
+            RETURNING id
+            """,
+            [collection_id, collection_id],
+        )
+        return updated is not None
 
     def _get_collection(self, db: PgstacDB, collection_id: str) -> dict | None:
         """
