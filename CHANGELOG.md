@@ -29,6 +29,9 @@ The first public release.
   product dates until new scenes arrived, so collections whose products
   had ended never showed their scenes' coverage. A collection with no
   scenes yet shows its product windows and the India box.
+- A search box given with heights (six numbers) searches its map box
+  instead of failing with a server error. Scene footprints carry no
+  height, so the heights are ignored.
 - Items and collections declare no STAC extension. The eo, sat and view
   fields the items carried did not fit those extensions: the portal's
   path number, pass type and roll angle stay as its own fields.
