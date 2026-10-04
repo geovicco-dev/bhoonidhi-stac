@@ -2,6 +2,7 @@ from typing import Any
 
 import psycopg
 from psycopg import sql
+from psycopg.types.json import Jsonb
 from pypgstac.db import PgstacDB
 from pypgstac.load import Loader, Methods
 from pypgstac.migrate import Migrate
@@ -298,6 +299,11 @@ class DatabaseManager:
                 # After the migration, which reinstalls pgSTAC's own version
                 self._read_bbox_with_heights_as_2d(db)
 
+                # The properties the API lists as filterable, and the indexes
+                # searches on product and availability need
+                self._ensure_queryables(db)
+                self._ensure_search_indexes(db)
+
                 self.console.print("\n[green]✅ pgSTAC schema is ready[/green]")
 
                 # Enable Auto Extent
@@ -388,6 +394,209 @@ class DatabaseManager:
         with db.connect().cursor() as cur:
             cur.execute(self.BBOX_GEOM_2D)
         self.console.print("   ├─ Search bbox with heights read as its 2D box")
+
+    # The scene properties the STAC API lists at /queryables, so a client can
+    # see what it may filter on, each property's type and what it means. The
+    # wrappers are the ones pgSTAC's own search applies to these values: gsd
+    # is stored as a number, the other two as text.
+    #
+    # No entry names an index type. pgSTAC would then build an index on the
+    # property alone, and drop any other index on that property when it next
+    # maintains its tables; the indexes searches need are built below.
+    QUERYABLES: tuple[dict[str, Any], ...] = (
+        {
+            "name": "gsd",
+            "definition": {
+                "title": "Resolution",
+                "description": (
+                    "The sensor's resolution in metres, from the portal's product list"
+                ),
+                "type": "number",
+            },
+            "property_wrapper": "to_float",
+            "property_index_type": None,
+        },
+        {
+            "name": "SELECTION",
+            "definition": {
+                "title": "Product",
+                "description": (
+                    "The portal's product name: satellite, sensor and product "
+                    "joined by underscores, such as Sentinel-2B_MSI_Level-2A, "
+                    "or satellite and sensor only, such as Aqua_MODIS, for a "
+                    "sensor's default product"
+                ),
+                "type": "string",
+            },
+            "property_wrapper": "to_text",
+            "property_index_type": None,
+        },
+        {
+            "name": "bhoonidhi:availability",
+            "definition": {
+                "title": "Availability",
+                "description": (
+                    "How the scene could be obtained when it was last searched: "
+                    "direct_available (open data, staged for download), "
+                    "direct_unavailable (open data, not currently staged; a "
+                    "download may fail until it is requested on the portal), "
+                    "on_order (must be ordered on the portal), priced (requires "
+                    "payment)"
+                ),
+                "type": "string",
+                "enum": [
+                    "direct_available",
+                    "direct_unavailable",
+                    "on_order",
+                    "priced",
+                ],
+            },
+            "property_wrapper": "to_text",
+            "property_index_type": None,
+        },
+    )
+
+    # The properties that get an index on every scene table, and the short
+    # name each index carries. A search returns the newest scenes first, so
+    # the index holds the property and then the date, newest first: a table
+    # can then hand over its newest matching scenes directly, and a table
+    # with no match answers at once. Without it, a filter on either property
+    # across every collection with no area reads each table to its end (a
+    # product no scene has took 88 s on 8 million scenes). An index on the
+    # property alone was tried and helped only pages of 250 scenes or more.
+    #
+    # Resolution gets none: all scenes of a sensor share one or two
+    # resolutions, so leaving out the collections that cannot match is what
+    # makes a resolution filter fast.
+    SEARCH_INDEXES: tuple[tuple[str, str], ...] = (
+        ("SELECTION", "selection"),
+        ("bhoonidhi:availability", "availability"),
+    )
+
+    def _ensure_queryables(self, db: PgstacDB) -> None:
+        """Write the entries in ``QUERYABLES`` that are missing or differ.
+
+        Nothing is written when every entry already matches. The entries name
+        no index type, so pgSTAC builds and drops nothing for them.
+        """
+        conn = db.connect()
+        names = [q["name"] for q in self.QUERYABLES]
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT name, definition, property_wrapper, property_index_type
+                FROM pgstac.queryables
+                WHERE name = ANY(%s) AND collection_ids IS NULL
+                """,
+                (names,),
+            )
+            existing = {row[0]: row[1:] for row in cur.fetchall()}
+
+        changed = [
+            q
+            for q in self.QUERYABLES
+            if existing.get(q["name"])
+            != (q["definition"], q["property_wrapper"], q["property_index_type"])
+        ]
+        if not changed:
+            self.console.print("   ├─ Queryables up to date")
+            return
+
+        with conn.transaction(), conn.cursor() as cur:
+            for q in changed:
+                values = (
+                    Jsonb(q["definition"]),
+                    q["property_wrapper"],
+                    q["property_index_type"],
+                    q["name"],
+                )
+                if q["name"] in existing:
+                    cur.execute(
+                        """
+                        UPDATE pgstac.queryables
+                        SET definition = %s, property_wrapper = %s,
+                            property_index_type = %s
+                        WHERE name = %s AND collection_ids IS NULL
+                        """,
+                        values,
+                    )
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO pgstac.queryables
+                            (definition, property_wrapper, property_index_type, name)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        values,
+                    )
+        self.console.print(
+            f"   ├─ Queryables written: {', '.join(q['name'] for q in changed)}"
+        )
+
+    def _ensure_search_indexes(self, db: PgstacDB) -> None:
+        """Build the ``SEARCH_INDEXES`` indexes on every scene table that lacks
+        them, then refresh those tables' statistics.
+
+        The indexes on all tables are built in one transaction, so a failure
+        leaves none half done. While they build, writes to the scene tables
+        wait; searches do not. A table that already has them is skipped, so a
+        re-run builds nothing. A collection's table created after this run
+        gets them the next time it runs.
+        """
+        conn = db.connect()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT c.relname
+                FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'pgstac' AND c.relkind = 'r'
+                  AND c.relispartition AND c.relname LIKE '\\_items\\_%%'
+                """
+            )
+            tables = sorted(row[0] for row in cur.fetchall())
+            cur.execute("SELECT indexname FROM pg_indexes WHERE schemaname = 'pgstac'")
+            present = {row[0] for row in cur.fetchall()}
+
+        wanted = [
+            (table, prop, f"{table}_{tag}_datetime_idx")
+            for table in tables
+            for prop, tag in self.SEARCH_INDEXES
+        ]
+        missing = [w for w in wanted if w[2] not in present]
+        if not missing:
+            self.console.print(
+                f"   ├─ Search indexes present on all {len(tables)} scene tables"
+            )
+            return
+
+        with conn.transaction(), conn.cursor() as cur:
+            for table, prop, index in missing:
+                cur.execute(
+                    sql.SQL(
+                        "CREATE INDEX IF NOT EXISTS {index} ON pgstac.{table} "
+                        "(to_text((content -> 'properties') -> {prop}), datetime DESC)"
+                    ).format(
+                        index=sql.Identifier(index),
+                        table=sql.Identifier(table),
+                        prop=sql.Literal(prop),
+                    )
+                )
+        built = sorted({table for table, _, _ in missing})
+        self.console.print(
+            f"   ├─ Search indexes built: {len(missing)} on {len(built)} scene tables"
+        )
+
+        # The planner chooses a new index only once the table's statistics
+        # cover it, so refresh them (ANALYZE samples each table; it does not
+        # read every scene).
+        with conn.cursor() as cur:
+            for table in built:
+                cur.execute(
+                    sql.SQL("ANALYZE pgstac.{table}").format(
+                        table=sql.Identifier(table)
+                    )
+                )
+        self.console.print(f"   ├─ Statistics refreshed on {len(built)} scene tables")
 
     def _enable_pgstac_auto_extent(self, conn):
         """Sets the PgSTAC setting to automatically update collection extents."""

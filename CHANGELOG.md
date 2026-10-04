@@ -37,3 +37,7 @@ The first public release.
   path number, pass type and roll angle stay as its own fields.
 - NovaSAR-1 is credited to SSTL, which operates it; the Sentinel credit
   links to the EU's Copernicus pages.
+- A search that filters on product or availability across every
+  collection answers at once instead of reading every scene: both get an
+  index. The API's `/queryables` lists resolution, product and
+  availability with what each means.

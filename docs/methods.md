@@ -113,6 +113,20 @@ box, since scene footprints carry no height. pgSTAC's own version builds a
 3D box that cannot be compared with a flat footprint, so such a search
 failed with a server error.
 
+It also lists three scene properties at the API's `/queryables`, with their
+type and meaning, so a client can see what it may filter on: `gsd`,
+`SELECTION` and `bhoonidhi:availability`. Product (`SELECTION`) and
+availability get an index on every scene table, on the property and then
+the date, newest first, since searches return the newest scenes first.
+Without it, a filter on either across every collection with no area reads
+each table to its end: on 8 million scenes a product no scene has took 88
+seconds. With it, the search answers at once. Resolution gets no index:
+all scenes of a sensor share one or two resolutions, so when any
+collection matches, the database keeps reading each table by date, and a
+table that cannot match is still read to its end. A search for a
+resolution is fastest when it names only the collections whose resolution
+can match.
+
 ## Keeping it current
 
 Once a week, the ingest searches the most recent week of every product and
