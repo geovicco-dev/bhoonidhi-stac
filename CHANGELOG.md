@@ -41,3 +41,12 @@ The first public release.
   collection answers at once instead of reading every scene: both get an
   index. The API's `/queryables` lists resolution, product and
   availability with what each means.
+
+### Security
+
+- The certificate bundle, certifi, moves from 2026.7.22 to 2026.10.23.
+  That release removes three emSign root certificates (emSign ECC Root
+  CA - G3, emSign Root CA - C1 and emSign ECC Root CA - C3), its fix for
+  the advisory about compromised emSign intermediate CA keys. The
+  Bhoonidhi portal client (bhoonidhi-downloader, through requests) checks
+  the portal's certificate against this bundle.
