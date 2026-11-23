@@ -93,5 +93,5 @@ writes this page; do not edit it by hand.
 | `sentinel-2a-msi` | Sentinel-2A | MSI | Level-1C, Level-2A | Copernicus/ESA | open, direct download | 2019-10-01 to acquiring |
 | `sentinel-2b-msi` | Sentinel-2B | MSI | Level-1C, Level-2A | Copernicus/ESA | open, direct download | 2019-10-01 to acquiring |
 | `sentinel-2c-msi` | Sentinel-2C | MSI | Level-1C, Level-2A | Copernicus/ESA | open, direct download | 2025-02-17 to acquiring |
-| `suomi-npp-viirs` | Suomi-NPP | VIIRS | Level-1_Day-Night, Level-1_Imagery, Level-1_Moderate | NASA/NOAA | open, direct download | 2021-01-15 to acquiring |
+| `suomi-npp-viirs` | Suomi-NPP | VIIRS | Level-1_Day-Night, Level-1_Imagery, Level-1_Moderate | NASA/NOAA | open, direct download | 2021-01-15 to 2026-11-02 |
 | `terra-modis` | Terra | MODIS | (default) | NASA | open, on order | 2002-10-01 to 2019-12-31 |
