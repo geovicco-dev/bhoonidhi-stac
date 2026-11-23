@@ -28,8 +28,8 @@ writes this page; do not edit it by hand.
 | `eos-04-sar-mrs` | EOS-04 | SAR(MRS) | L2B, 1x1deg-tiles, WaterSpread, SoilMoisture | ISRO | open, direct download | 2022-03-23 to acquiring |
 | `eos-06-ocm-gac` | EOS-06 | OCM(GAC) | L1C, L2C-AOD, L2C-Chlorophyll, L2C-DA, L2C-NDVI, L2C-RRS, L2C-TSM, L2C-VF | ISRO | open, direct download | 2023-04-01 to acquiring |
 | `eos-06-ocm-lac` | EOS-06 | OCM(LAC) | L1C, L2C-AOD, L2C-Chlorophyll, L2C-DA, L2C-NDVI, L2C-RRS, L2C-TSM | ISRO | open, direct download | 2023-04-01 to acquiring |
-| `irs-1a-liss1` | IRS-1A | LISS1 | (default) | ISRO | open, on order | 1988-04-04 to 1991-05-28 |
-| `irs-1a-liss2` | IRS-1A | LISS2 | (default) | ISRO | open, on order | 1988-04-04 to 1991-05-28 |
+| `irs-1a-liss1` | IRS-1A | LISS1 | L2, (default) | ISRO | open, direct download | 1988-04-04 to 1991-05-28 |
+| `irs-1a-liss2` | IRS-1A | LISS2 | L2, (default) | ISRO | open, direct download | 1988-04-04 to 1991-05-28 |
 | `irs-1b-liss1` | IRS-1B | LISS1 | (default) | ISRO | open, on order | 1991-10-02 to 2001-09-09 |
 | `irs-1b-liss2` | IRS-1B | LISS2 | (default) | ISRO | open, on order | 1991-10-02 to 2001-09-09 |
 | `irs-1c-liss3` | IRS-1C | LISS3 | (default) | ISRO | open, on order | 1996-11-14 to 2007-09-20 |

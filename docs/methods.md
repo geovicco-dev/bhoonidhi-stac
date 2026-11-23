@@ -38,7 +38,8 @@ Collections declare no STAC extension.
 
 The list is kept in `src/bhoonidhi_stac/data/collections-manifest.json`.
 `scripts/refresh_manifest.py --refresh` rebuilds it from the portal's current
-product list; a product the portal adds appears once it is rerun.
+product list; a product the portal adds appears once it is rerun, and a
+product it stops listing stays.
 [collections.md](collections.md) shows every collection.
 
 ## Searching the portal
