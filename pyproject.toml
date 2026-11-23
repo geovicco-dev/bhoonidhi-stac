@@ -7,7 +7,7 @@ license = "MIT"
 requires-python = ">=3.12"
 authors = [{ name = "Aditya Sharma", email = "geovicco.dev@gmail.com" }]
 dependencies = [
-    "bhoonidhi-downloader==0.5.6",
+    "bhoonidhi-downloader==0.6.0",
     "psycopg[binary]>=3.2",
     "pypgstac[psycopg]==0.9.12",
     "pydantic>=2.9",
