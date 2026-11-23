@@ -47,6 +47,11 @@ The first public release.
 - Suomi-NPP VIIRS ends on 2 November 2026, the date the portal now gives
   for its three products. The weekly ingest no longer searches weeks
   after it, which the portal refuses.
+- IRS-1A LISS1 and LISS2 add the portal's Level-2 orthorectified product
+  (`L2`, direct download). Their original product, which the portal no
+  longer lists but still serves, stays with its scenes.
+  `scripts/refresh_manifest.py` keeps any product or collection the
+  portal stops listing, and prints what it kept.
 
 ### Security
 
