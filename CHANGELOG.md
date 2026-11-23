@@ -52,6 +52,10 @@ The first public release.
   longer lists but still serves, stays with its scenes.
   `scripts/refresh_manifest.py` keeps any product or collection the
   portal stops listing, and prints what it kept.
+- bhoonidhi-downloader moves from 0.5.6 to 0.6.0. It can search a
+  product whose portal name has no suffix on its own (product `Others`,
+  listed here as `(default)`), and it still searches a product the portal
+  no longer lists.
 
 ### Security
 
