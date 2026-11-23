@@ -37,8 +37,9 @@ fails before the fix and passes after is the one to write.
   host and licensor, with the Bhoonidhi licence link. Keep
   `tests/test_stac_licensing.py` passing.
 - A change to the collection list comes from
-  `scripts/refresh_manifest.py`, followed by `scripts/collections_md.py`,
-  never from editing `collections-manifest.json` by hand.
+  `scripts/refresh_manifest.py --refresh`, followed by
+  `scripts/collections_md.py`, never from editing
+  `collections-manifest.json` by hand.
 
 ## Commits
 

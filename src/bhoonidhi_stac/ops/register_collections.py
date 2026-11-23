@@ -281,6 +281,7 @@ def build_stac_collection(
 
 def fetch_archive(
     satellite_filter: str | None = None,
+    refresh: bool = False,
 ) -> list[dict[str, Any]]:
     """Fetch the Bhoonidhi archive via the SDK and return parsed records.
 
@@ -291,6 +292,10 @@ def fetch_archive(
     ----------
     satellite_filter
         If given, return only the record whose ``satName`` matches.
+    refresh
+        Read the product list from the portal and update the SDK's saved
+        copy in ``~/.bhoonidhi/``. By default the saved copy is used,
+        which the SDK fetches only when it is missing.
 
     Returns
     -------
@@ -300,7 +305,7 @@ def fetch_archive(
     from bhoonidhi_downloader.sdk import BhoonidhiClient
 
     client = BhoonidhiClient()
-    raw_records = client.archive.list()
+    raw_records = client.archive.list(refresh=refresh)
     return _parse_archive(raw_records, satellite_filter=satellite_filter)
 
 

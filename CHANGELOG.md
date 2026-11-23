@@ -41,6 +41,9 @@ The first public release.
   collection answers at once instead of reading every scene: both get an
   index. The API's `/queryables` lists resolution, product and
   availability with what each means.
+- `scripts/refresh_manifest.py --refresh` reads the product list from the
+  portal. Without the flag it reads the downloader's saved copy, as
+  before, which can be older than the portal's.
 
 ### Security
 
