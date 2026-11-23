@@ -2,17 +2,21 @@
 
 Run from the repository root when the portal adds or ends a product:
 
-    uv run python scripts/refresh_manifest.py
+    uv run python scripts/refresh_manifest.py --refresh
 
 It reads the product list with bhoonidhi-downloader (no login), builds one
 entry per satellite and sensor with the library's own functions, and
 rewrites src/bhoonidhi_stac/data/collections-manifest.json in the portal's
 order, so an unchanged product list leaves the file unchanged. Then run
 scripts/collections_md.py so docs/collections.md matches.
+
+Without --refresh it reads the downloader's saved copy of the product list
+in ~/.bhoonidhi/, which may be older than the portal's.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -45,7 +49,16 @@ def entries_from(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
-    entries = entries_from(fetch_archive())
+    parser = argparse.ArgumentParser(
+        description="Regenerate the collections manifest from the portal's product list."
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="read the product list from the portal instead of the saved copy",
+    )
+    args = parser.parse_args()
+    entries = entries_from(fetch_archive(refresh=args.refresh))
     before = {e["collection_id"] for e in json.loads(MANIFEST.read_text())}
     MANIFEST.write_text(json.dumps(entries))
     after = {e["collection_id"] for e in entries}

@@ -37,8 +37,8 @@ the India search box. Its summaries list the resolutions and products.
 Collections declare no STAC extension.
 
 The list is kept in `src/bhoonidhi_stac/data/collections-manifest.json`.
-`scripts/refresh_manifest.py` rebuilds it from the portal's current product
-list; a product the portal adds appears once it is rerun.
+`scripts/refresh_manifest.py --refresh` rebuilds it from the portal's current
+product list; a product the portal adds appears once it is rerun.
 [collections.md](collections.md) shows every collection.
 
 ## Searching the portal

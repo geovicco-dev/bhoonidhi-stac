@@ -114,5 +114,6 @@ uv run ruff check . && uv run ruff format --check .
 ```
 
 When the portal adds or ends a product, `uv run python
-scripts/refresh_manifest.py` rebuilds the collection list, and `uv run
-python scripts/collections_md.py` updates docs/collections.md.
+scripts/refresh_manifest.py --refresh` rebuilds the collection list from
+the portal, and `uv run python scripts/collections_md.py` updates
+docs/collections.md.
