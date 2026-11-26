@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-11-26
 
 The first public release.
 
@@ -17,6 +17,17 @@ The first public release.
   portal's 500-result limit.
 - `scripts/refresh_manifest.py` rebuilds the collection list from the
   portal; `scripts/collections_md.py` writes docs/collections.md from it.
+- Scene counts: the STAC API's Aggregation extension (`/aggregate`). It
+  takes a search and answers with its number of scenes, the oldest and
+  newest dates, and the scenes per period, collection, satellite, and
+  satellite and period, from one database query. A scene filed under two
+  collections counts once, except in each collection's own count. The
+  server is `bhoonidhi_stac.api.app`, stac-fastapi-pgstac 7.0.0 with the
+  counts added (install with the `api` extra).
+- The server's image: `deploy/api.Dockerfile`. A release tag (`v1.2.3`)
+  publishes it to GHCR as `ghcr.io/geovicco-dev/bhoonidhi-stac-api`, built
+  by `deploy/build-image.sh`. It takes the same settings as the
+  stac-fastapi-pgstac image and serves on the same port, 8080.
 
 ### Fixed
 

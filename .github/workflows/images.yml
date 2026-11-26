@@ -1,0 +1,25 @@
+name: Images
+
+# A release tag (v1.2.3) builds the STAC API server image and publishes it
+# to GHCR, with deploy/build-image.sh, the script every release build uses.
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: bash deploy/build-image.sh "ghcr.io/${{ github.repository_owner }}/bhoonidhi-stac-api" "${GITHUB_REF_NAME#v}"
