@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.0] - 2026-11-27
+
+### Added
+
+- Scene counts by product: `/aggregate` takes
+  `platform_selection_datetime_frequency`, the scenes per satellite, then per
+  product (the portal's product token, the `SELECTION` property), then per
+  period. A scene filed under two products counts in each of them, and once
+  in its satellite's total.
+
 ## [0.1.0] - 2026-11-26
 
 The first public release.
