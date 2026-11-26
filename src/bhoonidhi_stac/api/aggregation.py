@@ -4,13 +4,14 @@ A search answers with scenes, at most 10,000 a page, so counting a large result
 by paging through it takes minutes. /aggregate takes the same search and
 answers with counts the database works out in one query: the total, the oldest
 and newest dates, and the number of scenes per period, per collection, per
-satellite, and per satellite and period.
+satellite, per satellite and period, and per satellite, product and period.
 
 The counts use pgSTAC's own filter: pgstac.stac_search_to_where turns the
 search into the WHERE clause pgstac.search runs, so a count always describes
 the scenes the same search returns. Some scenes are filed under two
 collections (ResourceSat-1 LISS-4 MX23 and MONO, NovaSAR-1). Such a scene
-counts once in every count, except that each of its collections counts it.
+counts once in every count, except that each of its collections counts it,
+and so does each of its products.
 """
 
 from __future__ import annotations
@@ -74,6 +75,15 @@ AVAILABLE: list[dict[str, str]] = [
         "data_type": FREQUENCY,
         "frequency_distribution_data_type": "string",
     },
+    # Per satellite, then per product (the portal's product token, the
+    # SELECTION property, e.g. "ResourceSat-2A_AWIFS_L2"), each holding that
+    # product's scenes per period. A token can belong to several satellites
+    # (CartoSat-2S), hence the satellite level above it.
+    {
+        "name": "platform_selection_datetime_frequency",
+        "data_type": FREQUENCY,
+        "frequency_distribution_data_type": "string",
+    },
 ]
 NAMES = [a["name"] for a in AVAILABLE]
 
@@ -81,8 +91,8 @@ INTERVALS = ("year", "month", "week", "day")
 DEFAULT_INTERVAL = "month"
 
 # The columns the counts are grouped by, and the grouping each aggregation
-# reads. A platform's per-period bucket needs the platform's own total as well.
-COLUMNS = ("collection", "platform", "period")
+# reads. A per-period bucket needs the totals of the levels above it as well.
+COLUMNS = ("collection", "platform", "selection", "period")
 GROUPS: dict[str, tuple[tuple[str, ...], ...]] = {
     "total_count": ((),),
     "datetime_min": ((),),
@@ -91,7 +101,15 @@ GROUPS: dict[str, tuple[tuple[str, ...], ...]] = {
     "collection_frequency": (("collection",),),
     "platform_frequency": (("platform",),),
     "platform_datetime_frequency": (("platform",), ("platform", "period")),
+    "platform_selection_datetime_frequency": (
+        ("platform",),
+        ("platform", "selection"),
+        ("platform", "selection", "period"),
+    ),
 }
+
+# The item properties the platform and selection columns are read from.
+PROPERTIES = {"platform": "platform", "selection": "SELECTION"}
 
 # The search fields that select scenes; paging, sorting and the aggregation
 # fields themselves do not change which scenes match.
@@ -130,9 +148,9 @@ class AggregateGet(AggregationExtensionGetRequest, FilterExtensionGetRequest):
 def level(columns: Iterable[str]) -> int:
     """A number naming the grouping of these columns, as each result row carries it.
 
-    It is what grouping(collection, platform, period) gives: a bit for every
-    column the row is not grouped by, 4 for collection, 2 for platform, 1 for
-    period.
+    It is what grouping(collection, platform, selection, period) gives: a bit
+    for every column the row is not grouped by, 8 for collection, 4 for
+    platform, 2 for selection, 1 for period.
     """
     grouped = set(columns)
     return sum(_bit(c) for c in COLUMNS if c not in grouped)
@@ -153,16 +171,19 @@ def grouped_query(where: str, sets: Sequence[tuple[str, ...]]) -> str:
     """One query counting the matching scenes for every grouping set.
 
     The period is the scene's date cut to the interval in UTC; $1 is the
-    interval. A scene's platform is read from its stored record, which is the
-    slow part on a large result, so it is read only when a grouping needs it.
+    interval. A scene's platform and product are read from its stored record,
+    which is the slow part on a large result, so each is read only when a
+    grouping needs it.
     """
-    needs_platform = any("platform" in g for g in sets)
-    platform = "content->'properties'->>'platform'" if needs_platform else "NULL::text"
+    used = {c for g in sets for c in g}
+    read = {
+        column: f"content->'properties'->>'{prop}'" if column in used else "NULL::text"
+        for column, prop in PROPERTIES.items()
+    }
     grouping_sets = ", ".join("(" + ", ".join(g) + ")" for g in sets)
     # Postgres's grouping() takes only columns some grouping set uses, and a
     # column no set uses cannot be selected; such a column is rolled up in
     # every row, so it reads as NULL and its bit is a constant.
-    used = {c for g in sets for c in g}
     row_level = " + ".join(
         f"grouping({c}) * {_bit(c)}" if c in used else str(_bit(c)) for c in COLUMNS
     )
@@ -175,7 +196,8 @@ def grouped_query(where: str, sets: Sequence[tuple[str, ...]]) -> str:
                max(datetime) AS newest
         FROM (
             SELECT id, collection, datetime,
-                   {platform} AS platform,
+                   {read["platform"]} AS platform,
+                   {read["selection"]} AS selection,
                    date_trunc($1, datetime, 'UTC') AS period
             FROM pgstac.items
             WHERE {where}
@@ -237,6 +259,25 @@ def to_aggregations(rows: Sequence[Any], wanted: Sequence[str]) -> list[Aggregat
             buckets = _by_frequency(at.get(level(["platform"]), []), "platform")
             for bucket in buckets:
                 bucket["buckets"] = _by_period(periods.get(bucket["key"], []))
+            out.append(Aggregation(name=name, data_type=FREQUENCY, buckets=buckets))
+        elif name == "platform_selection_datetime_frequency":
+            products: dict[str, list[Any]] = {}
+            for row in at.get(level(["platform", "selection"]), []):
+                products.setdefault(row["platform"], []).append(row)
+            by_product: dict[tuple[str, str], list[Any]] = {}
+            for row in at.get(level(["platform", "selection", "period"]), []):
+                by_product.setdefault((row["platform"], row["selection"]), []).append(
+                    row
+                )
+            buckets = _by_frequency(at.get(level(["platform"]), []), "platform")
+            for bucket in buckets:
+                bucket["buckets"] = _by_frequency(
+                    products.get(bucket["key"], []), "selection"
+                )
+                for product in bucket["buckets"]:
+                    product["buckets"] = _by_period(
+                        by_product.get((bucket["key"], product["key"]), [])
+                    )
             out.append(Aggregation(name=name, data_type=FREQUENCY, buckets=buckets))
     return out
 

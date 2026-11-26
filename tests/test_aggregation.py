@@ -35,13 +35,20 @@ def day(text: str) -> datetime:
 
 
 def row(
-    collection=None, platform=None, period=None, scenes=0, oldest=None, newest=None
+    collection=None,
+    platform=None,
+    period=None,
+    scenes=0,
+    oldest=None,
+    newest=None,
+    selection=None,
 ):
     grouped = [
         c
         for c, v in (
             ("collection", collection),
             ("platform", platform),
+            ("selection", selection),
             ("period", period),
         )
         if v
@@ -50,6 +57,7 @@ def row(
         "level": level(grouped),
         "collection": collection,
         "platform": platform,
+        "selection": selection,
         "period": period,
         "scenes": scenes,
         "oldest": oldest,
@@ -62,12 +70,15 @@ def by_name(aggregations):
 
 
 def test_grouping_levels_match_postgres_grouping_bits():
-    # grouping(collection, platform, period): 4, 2 and 1 for each column left out.
-    assert level(()) == 7
-    assert level(["period"]) == 6
-    assert level(["platform"]) == 5
-    assert level(["platform", "period"]) == 4
-    assert level(["collection"]) == 3
+    # grouping(collection, platform, selection, period): 8, 4, 2 and 1 for
+    # each column left out.
+    assert level(()) == 15
+    assert level(["period"]) == 14
+    assert level(["platform"]) == 11
+    assert level(["platform", "period"]) == 10
+    assert level(["platform", "selection"]) == 9
+    assert level(["platform", "selection", "period"]) == 8
+    assert level(["collection"]) == 7
 
 
 def test_a_total_needs_one_grouping_and_no_platform():
@@ -75,22 +86,39 @@ def test_a_total_needs_one_grouping_and_no_platform():
     assert sets == [()]
     sql = grouped_query("TRUE", sets)
     assert "NULL::text AS platform" in sql
+    assert "NULL::text AS selection" in sql
     assert "GROUPING SETS (())" in sql
     # Columns no grouping uses are neither selected nor passed to grouping().
-    assert "NULL AS collection, NULL AS platform, NULL AS period" in sql
+    assert (
+        "NULL AS collection, NULL AS platform, NULL AS selection, NULL AS period" in sql
+    )
     assert "grouping(" not in sql
 
 
 def test_platform_per_period_also_counts_each_platform():
     sets = groupings(["platform_datetime_frequency"])
     assert sets == [(), ("platform",), ("platform", "period")]
-    assert "content->'properties'->>'platform' AS platform" in grouped_query(
-        "TRUE", sets
-    )
+    sql = grouped_query("TRUE", sets)
+    assert "content->'properties'->>'platform' AS platform" in sql
+    # The product is read only when a count groups by it.
+    assert "NULL::text AS selection" in sql
+
+
+def test_product_per_period_also_counts_each_platform_and_product():
+    sets = groupings(["platform_selection_datetime_frequency"])
+    assert sets == [
+        (),
+        ("platform",),
+        ("platform", "selection"),
+        ("platform", "selection", "period"),
+    ]
+    sql = grouped_query("TRUE", sets)
+    assert "content->'properties'->>'SELECTION' AS selection" in sql
+    assert "NULL AS collection" in sql
 
 
 def test_every_aggregation_has_a_grouping():
-    assert len(groupings(NAMES)) == 5
+    assert len(groupings(NAMES)) == 7
 
 
 def test_response_shape_and_order():
@@ -110,6 +138,13 @@ def test_response_shape_and_order():
         row(platform="p1", period=day("2025-02-01"), scenes=1),
         row(platform="p1", period=day("2025-01-01"), scenes=4),
         row(platform="p2", period=day("2025-01-01"), scenes=1),
+        row(platform="p1", selection="P1_S_L1", scenes=2),
+        row(platform="p1", selection="P1_S_L2", scenes=4),
+        row(platform="p2", selection="P2_S", scenes=1),
+        row(platform="p1", selection="P1_S_L2", period=day("2025-02-01"), scenes=1),
+        row(platform="p1", selection="P1_S_L2", period=day("2025-01-01"), scenes=3),
+        row(platform="p1", selection="P1_S_L1", period=day("2025-01-01"), scenes=2),
+        row(platform="p2", selection="P2_S", period=day("2025-01-01"), scenes=1),
     ]
     out = to_aggregations(rows, NAMES)
     assert [a["name"] for a in out] == NAMES
@@ -137,6 +172,25 @@ def test_response_shape_and_order():
         ("2025-02-01T00:00:00Z", 1),
     ]
     assert all(b["data_type"] == "frequency_distribution" for b in nested[0]["buckets"])
+    # Satellites most scenes first, then their products most scenes first,
+    # then each product's periods oldest first.
+    products = got["platform_selection_datetime_frequency"]["buckets"]
+    assert [(b["key"], b["frequency"]) for b in products] == [("p1", 5), ("p2", 1)]
+    assert [(b["key"], b["frequency"]) for b in products[0]["buckets"]] == [
+        ("P1_S_L2", 4),
+        ("P1_S_L1", 2),
+    ]
+    assert [
+        (b["key"], b["frequency"]) for b in products[0]["buckets"][0]["buckets"]
+    ] == [
+        ("2025-01-01T00:00:00Z", 3),
+        ("2025-02-01T00:00:00Z", 1),
+    ]
+    assert [
+        (b["key"], b["frequency"]) for b in products[1]["buckets"][0]["buckets"]
+    ] == [
+        ("2025-01-01T00:00:00Z", 1),
+    ]
 
 
 def test_an_empty_result_counts_zero_and_has_no_dates():
@@ -146,6 +200,7 @@ def test_an_empty_result_counts_zero_and_has_no_dates():
     assert out["datetime_max"]["value"] is None
     assert out["datetime_frequency"]["buckets"] == []
     assert out["platform_datetime_frequency"]["buckets"] == []
+    assert out["platform_selection_datetime_frequency"]["buckets"] == []
 
 
 def test_plan_keeps_only_the_fields_that_select_scenes():
@@ -195,22 +250,31 @@ def test_requests_that_name_no_known_count_are_refused(body):
 DSN = os.environ.get("BHX_TEST_PGSTAC_DSN", "")
 
 # Two collections of one satellite share the scene "twice", as some
-# ResourceSat-1 and NovaSAR-1 scenes do; "far" lies outside the search box.
+# ResourceSat-1 and NovaSAR-1 scenes do, each under its own product; "far"
+# lies outside the search box. One product token belongs to both satellites,
+# as CartoSat-2S's do.
 NEAR = [10.0, 10.0, 10.1, 10.1]
 SCENES = [
-    ("test-counts-a", "one", "p1", "2025-01-01T04:00:00Z", NEAR),
-    ("test-counts-a", "two", "p1", "2025-01-01T09:00:00Z", NEAR),
-    ("test-counts-a", "three", "p1", "2025-01-02T04:00:00Z", NEAR),
-    ("test-counts-a", "twice", "p1", "2025-01-03T04:00:00Z", NEAR),
-    ("test-counts-b", "twice", "p1", "2025-01-03T04:00:00Z", NEAR),
-    ("test-counts-b", "four", "p1", "2025-02-10T04:00:00Z", NEAR),
-    ("test-counts-c", "five", "p2", "2025-01-02T23:30:00Z", NEAR),
-    ("test-counts-c", "far", "p2", "2025-01-02T04:00:00Z", [50.0, 50.0, 50.1, 50.1]),
+    ("test-counts-a", "one", "p1", "2025-01-01T04:00:00Z", NEAR, "P1_S_A"),
+    ("test-counts-a", "two", "p1", "2025-01-01T09:00:00Z", NEAR, "P1_S_A"),
+    ("test-counts-a", "three", "p1", "2025-01-02T04:00:00Z", NEAR, "P1_S_A"),
+    ("test-counts-a", "twice", "p1", "2025-01-03T04:00:00Z", NEAR, "P1_S_A"),
+    ("test-counts-b", "twice", "p1", "2025-01-03T04:00:00Z", NEAR, "P1_S_B"),
+    ("test-counts-b", "four", "p1", "2025-02-10T04:00:00Z", NEAR, "SHARED_S"),
+    ("test-counts-c", "five", "p2", "2025-01-02T23:30:00Z", NEAR, "SHARED_S"),
+    (
+        "test-counts-c",
+        "far",
+        "p2",
+        "2025-01-02T04:00:00Z",
+        [50.0, 50.0, 50.1, 50.1],
+        "SHARED_S",
+    ),
 ]
 COLLECTIONS = sorted({s[0] for s in SCENES})
 
 
-def _item(collection, scene_id, platform, when, box):
+def _item(collection, scene_id, platform, when, box, selection):
     w, s, e, n = box
     return {
         "type": "Feature",
@@ -222,7 +286,7 @@ def _item(collection, scene_id, platform, when, box):
             "type": "Polygon",
             "coordinates": [[[w, s], [e, s], [e, n], [w, n], [w, s]]],
         },
-        "properties": {"datetime": when, "platform": platform},
+        "properties": {"datetime": when, "platform": platform, "SELECTION": selection},
         "assets": {},
         "links": [],
     }
@@ -275,14 +339,23 @@ async def _run_counts():
         narrowed_counts = by_name(
             await count_scenes(conn, narrowed, ["total_count"], "day")
         )
+        # One product's scenes, as the explorer asks for a chosen product row.
+        product = {
+            **search,
+            "filter-lang": "cql2-json",
+            "filter": {"op": "=", "args": [{"property": "SELECTION"}, "P1_S_A"]},
+        }
+        product_counts = by_name(
+            await count_scenes(conn, product, ["total_count"], "day")
+        )
         found = []
-        for body in (search, narrowed):
+        for body in (search, narrowed, product):
             page = await conn.fetchval(
                 "SELECT pgstac.search($1::text::jsonb)::text",
                 json.dumps({**body, "limit": 100, "fields": {"include": ["id"]}}),
             )
             found.append({f["id"] for f in json.loads(page)["features"]})
-        return day_counts, month_counts, narrowed_counts, found
+        return day_counts, month_counts, narrowed_counts, product_counts, found
     finally:
         for collection_id in COLLECTIONS:
             await conn.execute("SELECT pgstac.delete_collection($1)", collection_id)
@@ -295,12 +368,15 @@ def _pairs(aggregation):
 
 @pytest.mark.skipif(not DSN, reason="BHX_TEST_PGSTAC_DSN names no test pgSTAC")
 def test_counts_match_the_search_and_count_a_shared_scene_once():
-    day_counts, month_counts, narrowed_counts, found = asyncio.run(_run_counts())
+    day_counts, month_counts, narrowed_counts, product_counts, found = asyncio.run(
+        _run_counts()
+    )
 
     # The same scenes pgSTAC's search returns, the shared one counted once.
     assert found[0] == {"one", "two", "three", "twice", "four", "five"}
     assert day_counts["total_count"]["value"] == len(found[0]) == 6
     assert narrowed_counts["total_count"]["value"] == len(found[1]) == 3
+    assert product_counts["total_count"]["value"] == len(found[2]) == 4
 
     assert day_counts["datetime_min"]["value"] == "2025-01-01T04:00:00Z"
     assert day_counts["datetime_max"]["value"] == "2025-02-10T04:00:00Z"
@@ -336,3 +412,25 @@ def test_counts_match_the_search_and_count_a_shared_scene_once():
         ("2025-02-10T00:00:00Z", 1),
     ]
     assert _pairs(p2) == [("2025-01-02T00:00:00Z", 1)]
+
+    # Each product counts the scenes filed under it: "twice" is under P1_S_A
+    # and P1_S_B, so p1's products hold 6 scenes against p1's 5. The token
+    # both satellites use is counted under each satellite on its own.
+    q1, q2 = day_counts["platform_selection_datetime_frequency"]["buckets"]
+    assert (q1["key"], q1["frequency"], q2["key"], q2["frequency"]) == (
+        "p1",
+        5,
+        "p2",
+        1,
+    )
+    assert _pairs(q1) == [("P1_S_A", 4), ("P1_S_B", 1), ("SHARED_S", 1)]
+    a, b, shared = q1["buckets"]
+    assert _pairs(a) == [
+        ("2025-01-01T00:00:00Z", 2),
+        ("2025-01-02T00:00:00Z", 1),
+        ("2025-01-03T00:00:00Z", 1),
+    ]
+    assert _pairs(b) == [("2025-01-03T00:00:00Z", 1)]
+    assert _pairs(shared) == [("2025-02-10T00:00:00Z", 1)]
+    assert _pairs(q2) == [("SHARED_S", 1)]
+    assert _pairs(q2["buckets"][0]) == [("2025-01-02T00:00:00Z", 1)]
