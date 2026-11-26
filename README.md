@@ -129,6 +129,11 @@ It takes every
 When `ENABLED_EXTENSIONS` is set, it must list `aggregation` for the scene
 counts.
 
+Its image builds from `deploy/api.Dockerfile` (`docker build -f
+deploy/api.Dockerfile .`). A release tag publishes it to GHCR as
+`ghcr.io/geovicco-dev/bhoonidhi-stac-api`; it takes the same settings as the
+stac-fastapi-pgstac image and serves on port 8080.
+
 When the portal adds or ends a product, `uv run python
 scripts/refresh_manifest.py --refresh` rebuilds the collection list from
 the portal, and `uv run python scripts/collections_md.py` updates

@@ -24,6 +24,10 @@ The first public release.
   collections counts once, except in each collection's own count. The
   server is `bhoonidhi_stac.api.app`, stac-fastapi-pgstac 7.0.0 with the
   counts added (install with the `api` extra).
+- The server's image: `deploy/api.Dockerfile`. A release tag (`v1.2.3`)
+  publishes it to GHCR as `ghcr.io/geovicco-dev/bhoonidhi-stac-api`, built
+  by `deploy/build-image.sh`. It takes the same settings as the
+  stac-fastapi-pgstac image and serves on the same port, 8080.
 
 ### Fixed
 
