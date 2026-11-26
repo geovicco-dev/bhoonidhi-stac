@@ -95,6 +95,7 @@ collections = stac_collections()  # 79 STAC collections with licence and credit
 | `ops/register_collections.py` | The portal's product list to collections, with licence and credit |
 | `ops/spatial.py` | Splits a search area until each part fits the portal's result limit |
 | `core/database.py` | Portal scene to STAC item; pgSTAC setup, collection registration and upserts |
+| `api/` | The STAC API server: stac-fastapi-pgstac with scene counts (`/aggregate`) added |
 
 Python 3.12 or later. The pgSTAC database must run pgSTAC 0.9.12, the
 version pypgstac is pinned to.
@@ -108,10 +109,25 @@ problems: see [SECURITY.md](SECURITY.md).
 ## Develop
 
 ```bash
-uv sync
+uv sync --all-extras
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
 ```
+
+Set `BHX_TEST_PGSTAC_DSN` to a throwaway pgSTAC database to run the tests
+that write to one.
+
+To run the STAC API server against a pgSTAC database (connection settings
+in `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` and `PGPASSWORD`):
+
+```bash
+uv run uvicorn bhoonidhi_stac.api.app:create_app --factory --port 8080
+```
+
+It takes every
+[stac-fastapi-pgstac setting](https://github.com/stac-utils/stac-fastapi-pgstac).
+When `ENABLED_EXTENSIONS` is set, it must list `aggregation` for the scene
+counts.
 
 When the portal adds or ends a product, `uv run python
 scripts/refresh_manifest.py --refresh` rebuilds the collection list from
