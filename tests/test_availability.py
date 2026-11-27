@@ -484,6 +484,26 @@ def test_weeks_the_ingest_does_not_search_are_counted_not_searched():
     assert res.checked == 1
 
 
+def test_before_week_leaves_that_week_and_later_ones_out():
+    store = _FakeStore(
+        [
+            _stored("newest", READY, WEEK_3 + timedelta(days=1), "L2"),
+            _stored("older", READY, WEEK_2 + timedelta(days=1), "L2"),
+        ]
+    )
+    searched: list[date] = []
+
+    def search(pw):
+        searched.append(pw.week)
+        return _qt({})
+
+    # A date inside the week, not only its Sunday, sets the cutoff.
+    res = _recheck(store, search, before_week=WEEK_3 + timedelta(days=3))
+    assert searched == [WEEK_2]
+    assert res.not_planned == 1
+    assert res.checked == 1
+
+
 def test_no_week_starts_once_the_stop_time_is_reached():
     store = _FakeStore(
         [
