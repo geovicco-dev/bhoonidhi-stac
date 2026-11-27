@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Availability re-checks: `bhoonidhi_stac.ops.availability.recheck_product`
+  asks the portal again about one product's scenes that pgSTAC holds as
+  `direct_available` or `direct_unavailable`, and corrects the ones whose
+  availability changed. It works one week at a time, newest week first,
+  with the week grid and product windows the ingest uses, and writes each
+  week before it searches the next, so a run that stops part way keeps the
+  weeks it finished. A week whose search fails is searched again at the
+  end; if it still fails, its scenes are left as they were.
+- `bhoonidhi_stac.core.availability.AvailabilityStore` writes only
+  `bhoonidhi:availability`, `bhoonidhi:downloadable`, `bhoonidhi:access` and
+  `updated`, in one UPDATE per week inside the stored item. pgSTAC's own
+  update and upsert delete and re-insert the whole item; this UPDATE leaves
+  assets, links, geometry and every other property as they were, and rolls
+  back if any of them would differ. `AvailabilityStore.weeks` lists a
+  product's ingest weeks with their scene counts, newest first, and
+  `AvailabilityStore.counts` counts each collection's scenes by
+  availability.
+
 ## [0.2.0] - 2026-11-27
 
 ### Added

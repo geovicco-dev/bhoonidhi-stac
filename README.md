@@ -94,7 +94,9 @@ collections = stac_collections()  # 79 STAC collections with licence and credit
 | `collections` | The collection list and each collection as STAC |
 | `ops/register_collections.py` | The portal's product list to collections, with licence and credit |
 | `ops/spatial.py` | Splits a search area until each part fits the portal's result limit |
+| `ops/availability.py` | Asks the portal again about a product's Ready and Archived scenes, week by week, and corrects their availability |
 | `core/database.py` | Portal scene to STAC item; pgSTAC setup, collection registration and upserts |
+| `core/availability.py` | Writes only a scene's availability fields in pgSTAC, leaving the rest of the item as it was, and counts each collection's scenes by availability |
 | `api/` | The STAC API server: stac-fastapi-pgstac with scene counts (`/aggregate`) added |
 
 Python 3.12 or later. The pgSTAC database must run pgSTAC 0.9.12, the
