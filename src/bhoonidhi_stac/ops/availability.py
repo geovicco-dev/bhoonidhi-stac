@@ -9,7 +9,8 @@ pgSTAC holds, and writes only the availability fields that changed (see
 one is searched, so a run that stops part way keeps every week it finished.
 
 Weeks follow the ingest's grid: a week starts on Sunday (UTC), only weeks that
-have ended are searched, and each week is clamped to the product's
+have ended are searched (and, with ``before_week``, only weeks before that
+one), and each week is clamped to the product's
 operational window, so the re-check asks the portal exactly what an ingest of
 the same week would.
 
@@ -207,8 +208,8 @@ class ProductRecheck:
     not_verified: int = 0
     #: Scenes in weeks whose search failed; never compared or written.
     not_checked: int = 0
-    #: Scenes in weeks the ingest does not search: outside the product's
-    #: window, or a week that has not ended yet.
+    #: Scenes in weeks the run leaves out: outside the product's window, a
+    #: week that has not ended yet, or a week from ``before_week`` on.
     not_planned: int = 0
     #: Scenes in weeks the run did not reach.
     not_reached: int = 0
@@ -272,6 +273,7 @@ def recheck_product(
     search: SearchFn,
     today: date,
     updated: datetime,
+    before_week: date | None = None,
     retries: int = 1,
     pause_seconds: float = 0.0,
     dry_run: bool = False,
@@ -285,17 +287,20 @@ def recheck_product(
     ``product_window`` is the product's entry in the collections manifest.
     Only weeks holding at least one Ready or Archived scene in our record are
     searched, newest first, and only their availability fields and
-    ``updated`` are written. No week is started once ``clock()`` reaches
+    ``updated`` are written. ``before_week`` leaves out the week containing
+    it and every later week. No week is started once ``clock()`` reaches
     ``stop_at``. ``on_week`` is called after each searched week, once its
     changes are written. A rolled-back write stops the run: nothing more is
     written.
     """
     token = product_window.get("token") or ""
     result = ProductRecheck(collection_id=collection_id, token=token)
-    last_ended = week_start(today)
+    cutoff = week_start(today)
+    if before_week is not None:
+        cutoff = min(cutoff, week_start(before_week))
     plan: list[tuple[ProductWeek, int]] = []
     for week, count in store.weeks(collection_id, token or None, REFRESHABLE):
-        pw = product_week(product_window, week) if week < last_ended else None
+        pw = product_week(product_window, week) if week < cutoff else None
         if pw is None:
             result.not_planned += count
         else:

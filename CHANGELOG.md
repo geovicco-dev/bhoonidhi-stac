@@ -21,6 +21,9 @@
   product's ingest weeks with their scene counts, newest first, and
   `AvailabilityStore.counts` counts each collection's scenes by
   availability.
+- `recheck_product` takes `before_week`, which leaves out the week holding
+  that date and every later week, so a caller can skip a week whose
+  availability it recorded a moment ago.
 
 ## [0.2.0] - 2026-11-27
 
